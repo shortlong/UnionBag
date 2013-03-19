@@ -1,0 +1,16 @@
+﻿Identifier = "UnionBag"
+Name = "UnionBag"
+Description = "背包整合插件"
+Author = "Wang"
+Version = "0.1"
+Email = "286217157@qq.com"
+Environment = "1.10"
+
+RunOnStartup = {
+    "dump.lua",
+	"tooltip.lua",
+	"unionbag.lua",
+}
+SavedVariables = {
+    UB_Settings = 'character',
+}
