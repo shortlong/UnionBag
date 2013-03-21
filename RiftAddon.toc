@@ -7,7 +7,7 @@ Email = "286217157@qq.com"
 Environment = "1.10"
 
 RunOnStartup = {
-    "dump.lua",
+    "utils.lua",
 	"tooltip.lua",
 	"unionbag.lua",
 }

@@ -6,6 +6,7 @@ local INV_MAX_BAGS = 5
 
 local ub_ui = { 
     context = UI.CreateContext(addon.identifier),
+    tooltipCount = 0,
 }
 
 Ux = Ux or { }
@@ -20,17 +21,6 @@ local rarityTexture = {
 	transcendant =	"icon_border_relic.dds",
 	uncommon =		"icon_border_uncommon.dds",
 }
-
-function pairsByKeys(t, f)
-    local a = {}
-    for n in pairs(t) do a[#a + 1] = n end
-    table.sort(a, f)
-    local i = 0
-    return function ()
-        i = i + 1
-        return a[i], t[a[i]]
-    end
-end
 
 function GetPlayerName()
     return Inspect.Unit.Detail("player").name
@@ -146,24 +136,21 @@ function CreateSlot(slotid, pframe)
     slot.text:SetPoint("BOTTOMRIGHT", slot.frame, "BOTTOMRIGHT", -8, -2)
 
     function slot.frame.Event:MouseIn()
-        ub_ui.focused = slotid
-        local item = GetItemDetail(slotid) 
-        local cursortype = Inspect.Cursor()
-        if item ~= nil then
+        local item = GetItemDetail(slotid)
+        if item then
             slot.highlight:SetVisible(true)
-            Command.Tooltip(item.id)
-            Ux.Tooltip.Show(item, self)
             Dump(item)
-        elseif cursortype and cursortype == "item" then
+            Command.Tooltip(item.id)
+            Ux.Tooltip.Show(slotid, self)
+        elseif Inspect.Cursor() == "item" then
             slot.highlight:SetVisible(true)
         end
     end
     function slot.frame.Event:MouseOut()
         slot.highlight:SetVisible(false)
-        if ub_ui.focused == slotid then
+        if GetItemDetail(slotid) then
             Command.Tooltip(nil)
-            Ux.Tooltip.Hide()
-            ub_ui.focused = ""
+            Ux.Tooltip.Hide(slotid)
         end
     end
     function slot.frame.Event:RightClick()
@@ -305,6 +292,7 @@ end
 function ToggleWindow()
     ub_ui.visible = not ub_ui.visible
     ub_ui.inventory:SetVisible(ub_ui.visible)
+    Ux.Tooltip.Hide()
 end
 
 function LoadUBData(a)
@@ -381,14 +369,14 @@ end
 
 function SystemUpdateBegin()
     if NEED_TO_BUILD_UI then
+        NEED_TO_BUILD_UI = false
         BuildUI()
         Ux.Tooltip.Init()
-        NEED_TO_BUILD_UI = false
     elseif NEED_TO_SCAN_INV then
-        BuildInventoryElements()
-        AddItemEvent()
         NEED_TO_SCAN_INV = false
         INV_SCANED = true
+        BuildInventoryElements()
+        AddItemEvent()
     end
 end
 
@@ -402,7 +390,7 @@ function UnitAvailabilityFull(t)
 end
 
 function Test()
-    --Dump(GetItemDetail("si01.001"))
+    --Dump(GetItemDetail(GetItemDetail("si01.001").id))
     --Ux.Tooltip.Init()
 end
 
