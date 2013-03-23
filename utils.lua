@@ -62,3 +62,11 @@ function pairsByKeys(t, f)
         return a[i], t[a[i]]
     end
 end
+
+function GetPlayerName()
+    return Inspect.Unit.Detail("player").name
+end
+
+function GetItemDetail(var)
+    return Inspect.Item.Detail(var)
+end

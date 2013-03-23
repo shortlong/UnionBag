@@ -4,19 +4,19 @@ Ux = Ux or { }
 Ux.Tooltip = { }
 
 ----------- Private -----------
-local tooltips = {}
+local tooltips = {showlist = {}}
 tooltips.context = UI.CreateContext(addon.identifier)
 tooltips.context:SetStrata("topmost")
 
 local rarityColor = {
     common =       {r = 1, g = 1, b = 1},
-    epic =         {r = 0.6, g = 0.26, b = 088},
+    epic =         {r = 0.9, g = 0.26, b = 0.9},
     quest =        {r = 0.8, g = 0.8, b = 0},
-    rare =         {r = 0.13, g = 0.42, b = 0.81},
+    rare =         {r = 0.13, g = 0.22, b = 1.0},
     relic =        {r = 0.86, g = 0.53, b = 0.01},
     sellable =     {r = 0.5, g = 0.5, b = 0.5},
     transcendant = {r = 0, g = 1, b = 0},
-    uncommon =     {r = 0.01, g = 0.71, b = 0.01},
+    uncommon =     {r = 0.01, g = 0.91, b = 0.01},
 }
 
 local Color = {
@@ -42,8 +42,11 @@ local itemDetailTrans = {
     damage =          "武器伤害",
     damageDelay =     "速度",
     damagePerSecond = "每秒伤害",
+    survival =        "野外生存",
+    
     consumable =      "消耗品",
     container =       "容器",
+    crafting =        "制造材料",
     onehand =         "单手",
     twohand =         "双手",
     staff =           "法杖",
@@ -55,15 +58,21 @@ local itemDetailTrans = {
     leather =         "皮甲",
     plate =           "板甲",
     chain =           "锁甲",
+    
     accessory =       "饰品",
+    trinket =         "饰品",
     ring =            "戒指",
     legs =            "双腿",
     chest =           "胸甲",
     shoulders =       "肩部",
     head =            "头盔",
+    waist =           "腰带",
     feet =            "脚部",
     hands =           "手套",
     neck =            "颈部",
+    planar =          "位面精华",
+    greater =         "高级",
+    
     armor =           "护甲",
     dexterity =       "敏捷",
     endurance =       "耐力",
@@ -80,16 +89,19 @@ local itemDetailTrans = {
     resistFire =      "火焰抗性",
     resistLife =      "生命抗性",
     resistWater =     "流水抗性",
-    crafting =        "制造材料",
-    planar =          "位面精华",
-    greater =         "高级",
     powerSpell =      "法术强度",
     critSpell =       "法术暴击率",
+    
+    mage =            "法师",
+    rogue =           "游侠",
+    cleric =          "牧师",
+    warrior =         "战士",
 }
 
 local TOOLTIP_WIDTH = 240
-local TOOLTIP_BORDER_WIDTH = 1
-local TOOLTIP_BORDER_HEIGHT = 1
+local TOOLTIP_BORDER_WIDTH = 2
+local TOOLTIP_BORDER_HEIGHT = 2
+local TOOLTIP_INFO_PADDING = 5
 
 local function Translate(word)
     return itemDetailTrans[word] or word
@@ -116,7 +128,7 @@ local function CreateTooltipBorder(pframe)
     border.bottom:SetWidth(TOOLTIP_WIDTH)
     border.bottom:SetHeight(TOOLTIP_BORDER_HEIGHT)
     border.bottom:SetBackgroundColor(1, 1, 1)
-    border.bottom:SetPoint("BOTTOMLEFT", pframe, "BOTTOMLEFT", 0, -1)
+    border.bottom:SetPoint("BOTTOMLEFT", pframe, "BOTTOMLEFT", 0, 0)
 
     border.left = UI.CreateFrame("Frame", "tooltip.border", pframe)
     border.left:SetWidth(TOOLTIP_BORDER_WIDTH)
@@ -128,29 +140,14 @@ local function CreateTooltipBorder(pframe)
     border.right:SetWidth(TOOLTIP_BORDER_WIDTH)
     border.right:SetHeight(pframe:GetHeight())
     border.right:SetBackgroundColor(1, 1, 1)
-    border.right:SetPoint("TOPRIGHT", pframe, "TOPRIGHT", -1, 0)
+    border.right:SetPoint("TOPRIGHT", pframe, "TOPRIGHT", 0, 0)
     return border
 end
-
-local itemDetailFrame = {
-    "name",
-    "bind",
-    "damage",
-    "damageDelay",
-    "damagePerSecond",
-    "stackMax",
-    "sell",
-    "range",
-    "crafter",
-    "requiredCalling",
-    "requiredLevel",
-    "requiredSkill",
-}
 
 local function CreateText(parent)
     local frame = UI.CreateFrame("Text", "tolltip.info", parent)
     frame:SetVisible(false)
-    frame:SetWidth(TOOLTIP_WIDTH - TOOLTIP_BORDER_WIDTH*2 - 5)
+    frame:SetWidth(TOOLTIP_WIDTH - TOOLTIP_BORDER_WIDTH*2 - TOOLTIP_INFO_PADDING*2)
     frame:SetFontSize(14)
     return frame
 end
@@ -158,29 +155,26 @@ end
 local function CreateFrame(parent)
     local frame = UI.CreateFrame("Frame", "tolltip.info", parent)
     frame:SetVisible(false)
-    frame:SetWidth(TOOLTIP_WIDTH - TOOLTIP_BORDER_WIDTH*2 - 5)
+    frame:SetWidth(TOOLTIP_WIDTH - TOOLTIP_BORDER_WIDTH*2 - TOOLTIP_INFO_PADDING*2)
     return frame
 end
 
-local function CreateCategoryFrame(parent)
-    local category = { }
-    category.frame = CreateFrame(parent)
-    category.left = CreateText(category.frame)
-    category.left:SetPoint("TOPLEFT", category.frame, "TOPLEFT", 0, 0)
-    category.left:SetText("1")
-    category.right = CreateText(category.frame)
-    category.right:SetPoint("TOPRIGHT", category.frame, "TOPRIGHT", 0, 0)
-    category.right:SetWidth(40)
-    category.frame:SetHeight(category.left:GetHeight())
-    return category
+local function CreateCategoryChild(parent)
+    local child = { }
+    child.left = CreateText(parent)
+    child.left:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    child.left:SetText("1")
+    child.right = CreateText(parent)
+    child.right:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
+    child.right:SetWidth(40)
+    parent:SetHeight(child.left:GetHeight())
+    return child
 end
 
 local function CreateTooltipInfoFrames(framelist, parent)
     local info = { }
-    for i, v in ipairs(framelist) do
-        info[v] = CreateText(parent)
-    end
-    info.category = CreateCategoryFrame(parent) 
+    info.category = CreateFrame(parent)
+    info.categoryChild = CreateCategoryChild(info.category)
     info.description = CreateText(parent)
     info.description:SetWordwrap(true)
     info.flavor = CreateText(parent)
@@ -188,49 +182,56 @@ local function CreateTooltipInfoFrames(framelist, parent)
     return info
 end
 
-local function SetStatsInfo(tooltip, stats)
-    local info = tooltip.info
+local function TooltipInfoAppend(tooltip, t)
+    if t[1] and tooltip.info[t[1]] == nil then
+        tooltip.info[t[1]] = CreateText(tooltip.frame)
+    end
+    table.insert(tooltip.showlist, t)
+end
 
+local function SetStatsInfo(tooltip, stats)
     for k, v in pairsByKeys(stats) do
-        if not info[k] then info[k] = CreateText(tooltip.frame) end
         local text = Translate(k) .. " +" .. v
-        table.insert(tooltip.showlist, {info[k], text, Color.white, 14})
+        TooltipInfoAppend(tooltip, {k, text, Color.white, 14})
     end
 end
 
-local function SetWeaponInfo(tooltip, categorys, item)
-    local info = tooltip.info
-    info.category.left:SetText(Translate(categorys[2]))
-    info.category.right:SetText(Translate(categorys[3]))
-    info.category.right:SetVisible(true)
-    info.category.left:SetVisible(true)
-
-    local text = Translate("damage") .. ": " .. item.damageMin .. " - " .. item.damageMax
-    table.insert(tooltip.showlist, {info.damage, text, Color.white, 14})
-    local speed = round(item.damageDelay, 2)
-    text = Translate("damageDelay") .. ": " .. speed
-    table.insert(tooltip.showlist, {info.damageDelay, text, Color.white, 14})
-    text = Translate("damagePerSecond") .. ": " .. round((item.damageMin + item.damageMax) / 2 / speed, 1)
-    table.insert(tooltip.showlist, {info.damagePerSecond, text, Color.white, 14})
+local function SetDamageInfo(tooltip, item)
+    local text 
+    if item.damageMin then
+        text = Translate("damage") .. ": " .. item.damageMin .. " - " .. item.damageMax
+        TooltipInfoAppend(tooltip, {"damage", text, Color.white, 14})
+        local speed = round(item.damageDelay, 2)
+        text = Translate("damageDelay") .. ": " .. speed
+        TooltipInfoAppend(tooltip, {"damageDelay", text, Color.white, 14})
+        text = Translate("damagePerSecond") .. ": " .. round((item.damageMin + item.damageMax) / 2 / speed, 1)
+        TooltipInfoAppend(tooltip, {"damagePerSecond", text, Color.white, 14})
+    end
     if item.range then
         text = Translate("range") .. ": " .. item.range
-        table.insert(tooltip.showlist, {info.range, text, Color.white, 14})
+        TooltipInfoAppend(tooltip, {"range", text, Color.white, 14})
     end
 end
 
-local function SetArmorInfo(tooltip, categorys, item)
-    local info = tooltip.info
-    info.category.left:SetText(Translate(categorys[3]))
-    info.category.right:SetText(Translate(categorys[2]))
-    info.category.right:SetVisible(true)
-    info.category.left:SetVisible(true)
-end
-
-local function SetDefaultInfo(tooltip, categorys, item)
-    local info = tooltip.info
-    info.category.left:SetText(Translate(categorys[1]))
-    info.category.right:SetVisible(false)
-    info.category.left:SetVisible(true)
+local function SetCategory(handle, categorys)
+    local ct = split(categorys)
+    if ct[1] == "weapon" then
+        handle.left:SetText(Translate(ct[2]))
+        handle.right:SetText(Translate(ct[3]))
+        handle.right:SetVisible(true)
+    elseif ct[1] == "armor" then
+        handle.left:SetText(Translate(ct[3]))
+        handle.right:SetText(Translate(ct[2]))
+        handle.right:SetVisible(true)
+    elseif ct[1] == "planar" then
+        handle.left:SetText(Translate(ct[1]))
+        handle.right:SetText(Translate(ct[2]))
+        handle.right:SetVisible(true)
+    else
+        handle.left:SetText(Translate(ct[1]))
+        handle.right:SetVisible(false)
+    end
+    handle.left:SetVisible(true)
 end
 
 local function GetSellText(sell)
@@ -244,156 +245,282 @@ local function GetSellText(sell)
     return text
 end
 
-local function SetTooltipInfo(tooltip, item)
+local function SetCompareDetail(tooltip, comp)
+    TooltipInfoAppend(tooltip, {"compareTips", "替换此物品会改变:", Color.yellow, 13})
+    for k, v in pairsByKeys(comp) do
+        local text = string.format("%s %+d", Translate(k), v)
+        TooltipInfoAppend(tooltip, {"compare" .. k, text, v > 0 and Color.green or Color.red, 13})
+    end
+end
+
+local function SetCalling(tooltip, calling)
+    local text = Translate("requiredCalling") .. ": "
+    for i, v in ipairs(split(calling)) do
+        text = text .. Translate(v) .. " "
+    end
+    local color = string.find(calling, Inspect.Unit.Detail("player").calling) and Color.white or Color.red
+    TooltipInfoAppend(tooltip, {"requiredCalling", text, color, 14})
+end
+
+local function SetTooltipInfo(tooltip, item, comp)
     local info = tooltip.info
-    table.insert(tooltip.showlist, {info.name, item.name, rarityColor[item.rarity or "common"], 16})
+    if tooltip.tooltipType == "compare" then
+        TooltipInfoAppend(tooltip, {"compareHead", "当前装备", Color.white, 14})
+    end
+    TooltipInfoAppend(tooltip, {"name", item.name, rarityColor[item.rarity or "common"], 16})
     if item.bound then
-        table.insert(tooltip.showlist, {info.bind, Translate("bound"), Color.white, 14})
+        TooltipInfoAppend(tooltip, {"bind", Translate("bound"), Color.white, 14})
     elseif item.bind then
-        table.insert(tooltip.showlist, {info.bind, Translate(item.bind), Color.white, 14})
-    end
-    table.insert(tooltip.showlist, {info.category.frame, nil, nil, nil})
-    
-    local categorys = split(item.category)
-    if categorys[1] == "weapon" then
-        SetWeaponInfo(tooltip, categorys, item)
-    elseif categorys[1] == "armor" then
-        SetArmorInfo(tooltip, categorys, item)
-    else
-        SetDefaultInfo(tooltip, categorys, item)
+        TooltipInfoAppend(tooltip, {"bind", Translate(item.bind), Color.white, 14})
     end
     
-    if item.stats then
-        SetStatsInfo(tooltip, item.stats)
+    SetCategory(info.categoryChild, item.category)
+    TooltipInfoAppend(tooltip, {"category", nil, nil, nil})
+    
+    if item.requiredSkill then
+        TooltipInfoAppend(tooltip, 
+            {"requiredSkill", "需要" .. Translate(item.requiredSkill) .. " " .. item.requiredSkillLevel, Color.white, 14})
     end
+    SetDamageInfo(tooltip, item)
+    
+    if item.stats then SetStatsInfo(tooltip, item.stats) end
     if item.description then
-        table.insert(tooltip.showlist, {info.description, item.description, Color.white, 14})
+        TooltipInfoAppend(tooltip, {"description", item.description, Color.white, 14})
     end
     if item.flavor then
-        table.insert(tooltip.showlist, {info.flavor, "'" .. item.flavor .. "'", Color.yellow, 14})
+        TooltipInfoAppend(tooltip, {"flavor", "'" .. item.flavor .. "'", Color.yellow, 14})
     end
     if item.requiredLevel then
-        table.insert(tooltip.showlist, {info.requiredLevel, Translate("requiredLevel") .. ": " .. item.requiredLevel, Color.white, 14})
+        TooltipInfoAppend(tooltip, {"requiredLevel", Translate("requiredLevel") .. ": " .. item.requiredLevel, Color.white, 14})
     end
-    if item.requiredCalling then
-        table.insert(tooltip.showlist, {info.requiredCalling, Translate("requiredCalling") .. ": " .. item.requiredCalling, Color.white, 14})
-    end
+    if item.requiredCalling then SetCalling(tooltip, item.requiredCalling) end
+    
     if item.stackMax then 
-        table.insert(tooltip.showlist, {info.stackMax, Translate("stackMax") .. ": " .. item.stackMax, Color.white, 14})
+        TooltipInfoAppend(tooltip, {"stackMax", Translate("stackMax") .. ": " .. item.stackMax, Color.white, 14})
     end
     if item.crafter then
-        table.insert(tooltip.showlist, {info.crafter, string.format("由<%s>制造", item.crafter), Color.white, 14})
+        TooltipInfoAppend(tooltip, {"crafter", string.format("由<%s>制造", item.crafter), Color.white, 14})
     end
     if item.sell then 
-        table.insert(tooltip.showlist, {info.sell, GetSellText(item.sell), Color.white, 14})
+        TooltipInfoAppend(tooltip, {"sell", GetSellText(item.sell), Color.white, 14})
     end
+    
+    if comp then SetCompareDetail(tooltip, comp) end
 end
 
 local function ShowTooltipInfo(tooltip)
     for i, element in ipairs(tooltip.showlist) do 
-        local frame = element[1]
+        local frame = tooltip.info[element[1]]
         frame:SetVisible(true)
         if element[2] then frame:SetText(element[2]) end
         if element[3] then frame:SetFontColor(element[3].r, element[3].g, element[3].b) end
         if element[4] then frame:SetFontSize(element[4]) end
         if i == 1 then 
-            frame:SetPoint("TOPLEFT", tooltip.frame, "TOPLEFT", 5, 5)
+            frame:SetPoint("TOPLEFT", tooltip.frame, "TOPLEFT", TOOLTIP_INFO_PADDING, TOOLTIP_INFO_PADDING)
         else 
-            frame:SetPoint("TOPLEFT", tooltip.showlist[i - 1][1], "BOTTOMLEFT", 0, 0)
+            frame:SetPoint("TOPLEFT", tooltip.info[tooltip.showlist[i - 1][1]], "BOTTOMLEFT", 0, 0)
         end
     end
 end
 
 local function AdjustTooltipSize(tooltip)
     local top = tooltip.frame:GetTop()
-    local bottom = tooltip.showlist[#tooltip.showlist][1]:GetBottom()
+    local bottom = tooltip.info[tooltip.showlist[#tooltip.showlist][1]]:GetBottom()
     local height = bottom - top + TOOLTIP_BORDER_HEIGHT + 4 
     tooltip.frame:SetHeight(height)
     tooltip.border.left:SetHeight(height)
     tooltip.border.right:SetHeight(height)
 end
 
-local function CreateTooltip()
+local function CreateTooltip(tooltipType)
     local tooltip = {}
     tooltip.showlist = { }
+    tooltip.tooltipType = tooltipType or "default"
     tooltip.frame = CreateTooltipFrame(tooltips.context)
     tooltip.border = CreateTooltipBorder(tooltip.frame)
     tooltip.info = CreateTooltipInfoFrames(itemDetailFrame, tooltip.frame)
     
     function tooltip.SetBorderColor(self, color)
-        if color == nil then return end
+        local color = color or rarityColor["common"]
         for k, v in pairs(self.border) do
             v:SetBackgroundColor(color.r, color.g, color.b)
         end
     end
     
-    function tooltip.Show(self, item)
-        self.frame:SetVisible(true)
-        self:SetBorderColor(rarityColor[item.rarity or "common"])
-        SetTooltipInfo(self, item)
+    function tooltip.Update(self, item, comp)
+        self:SetBorderColor(rarityColor[item.rarity])
+        SetTooltipInfo(self, item, comp)
         ShowTooltipInfo(self)
         AdjustTooltipSize(self)
+    end
+    
+    function tooltip.Show(self)
+        self.frame:SetVisible(true)
     end
 
     function tooltip.Hide(self)
         self.frame:SetVisible(false)
-        for k, v in pairs(self.showlist) do v[1]:SetVisible(false) end
+        for k, v in pairs(self.showlist) do self.info[v[1]]:SetVisible(false) end
         self.showlist = { }
+    end
+    
+    function tooltip.GetWidth(self)
+        return self.frame:GetWidth()
+    end
+    
+    function tooltip.GetHeight(self)
+        return self.frame:GetHeight()
+    end
+    
+    function tooltip.SetPoint(self, x, y)
+        return self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
     end
     return tooltip
 end
 
-local function GetTooltipPosition(tooltip, target)
+local function GetTooltipPosition(tipSize, target)
     local targetTop = target:GetTop()
     local targetBottom = target:GetBottom()
     local targetLeft = target:GetLeft()
     local targetRight = target:GetRight()
-    local tooltipWidth = tooltip.frame:GetWidth()
-    local tooltipHeight = tooltip.frame:GetHeight()
     local windowWidth = UIParent:GetWidth()
-
-    local x, y
-    y = targetTop - tooltipHeight
-    if y > 0 then
+    local postion = {}
+    
+    postion.top = targetTop - tipSize.height
+    if postion.top > 0 then
         -- target top
-        if targetRight + tooltipWidth < windowWidth then
-            return targetRight, y
+        if targetRight + tipSize.width < windowWidth then
+            postion.left = targetRight
+            postion.orientation = "topright"
         else
-            return targetLeft - tooltipWidth, y
+            postion.left = targetLeft - tipSize.width
+            postion.orientation = "topleft"
         end
     else 
         -- target bottom
-        if targetRight + tooltipWidth < windowWidth then
-            return targetRight, targetBottom
+        if targetRight + tipSize.width < windowWidth then
+            postion.left = targetRight
+            postion.top = targetBottom
+            postion.orientation = "bottomright"
         else
-            return targetLeft - tooltipWidth, targetBottom
+            postion.left = targetLeft - tipSize.width
+            postion.top = targetBottom
+            postion.orientation = "bottomleft"
         end
     end
+    postion.bottom = postion.top + tipSize.height
+    postion.right = postion.left + tipSize.width
+    return postion
+end
+
+local function GetCompareItems(category)
+    local ct = split(category)
+    local slot1, slot2
+    if ct[1] == "weapon" then
+        if ct[2] == "ranged" then
+            slot1 = "ranged"
+        else
+            slot1 = "handmain"
+            slot2 = "handoff"
+        end
+    elseif ct[1] == "armor" then
+        if ct[3] == "ring" then
+            slot1 = "ring1"
+            slot2 = "ring2"
+        elseif ct[3] == "head" then
+            slot1 = "helmet"
+        elseif ct[3] == "hands" then
+            slot1 = "gloves"
+        elseif ct[3] == "waist" then
+            slot1 = "belt"
+        else
+            slot1 = ct[3]
+        end
+    end
+    local item1, item2
+    if slot1 then item1 = Inspect.Item.Detail(Utility.Item.Slot.Equipment(slot1)) end
+    if slot2 then item2 = Inspect.Item.Detail(Utility.Item.Slot.Equipment(slot2)) end
+    return item1, item2
+end
+
+local function GetTooltipsSize(list)
+    local size = {width = 0, height = 0,}
+    for i, v in ipairs(list) do
+        size.height = math.max(size.height, v:GetHeight())
+        size.width = size.width + v:GetWidth()
+    end
+    return size
+end
+
+local function ArrangTooltips(list, target)
+    local pos = GetTooltipPosition(GetTooltipsSize(list), target)
+    for i, v in ipairs(list) do
+        if pos.orientation == "topright" then
+            v:SetPoint(pos.left, pos.bottom - v:GetHeight())
+            pos.left = pos.left + v:GetWidth()
+        elseif pos.orientation == "topleft" then
+            pos.right = pos.right - v:GetWidth()
+            v:SetPoint(pos.right, pos.bottom - v:GetHeight())
+        elseif pos.orientation == "bottomright" then
+            v:SetPoint(pos.left, pos.top)
+            pos.left = pos.left + v:GetWidth()
+        elseif pos.orientation == "bottomleft" then
+            pos.right = pos.right - v:GetWidth()
+            v:SetPoint(pos.right, pos.top)
+        else
+            print("ERROR: pos.orientation = " .. pos.orientation)
+        end
+        v:Show()
+    end
+end
+
+local function CompareStats(main, comp)
+    local result = {}
+    if main then for k, v in pairs(main) do result[k] = v end end
+    for k, v in pairsByKeys(comp) do
+        result[k] = (result[k] or 0) - v
+    end
+    return result
+end
+
+local function ShowTooltips(slotid, target)
+    local item = Inspect.Item.Detail(slotid)
+    tooltips.main:Update(item)
+    table.insert(tooltips.showlist, tooltips.main)
+    
+    local compItem1, compItem2 = GetCompareItems(item.category)
+    if compItem1 then 
+        tooltips.comp1:Update(compItem1, CompareStats(item.stats, compItem1.stats)) 
+        table.insert(tooltips.showlist, tooltips.comp1)
+    end
+    if compItem2 then 
+        tooltips.comp2:Update(compItem2, CompareStats(item.stats, compItem2.stats)) 
+        table.insert(tooltips.showlist, tooltips.comp2)
+    end
+    
+    ArrangTooltips(tooltips.showlist, target)
 end
 
 ----------- Pubic -----------
 function Ux.Tooltip.Init()
     tooltips.main = CreateTooltip()
-    tooltips.comp1 = CreateTooltip()
-    tooltips.comp2 = CreateTooltip()
+    tooltips.comp1 = CreateTooltip("compare")
+    tooltips.comp2 = CreateTooltip("compare")
 end
 
 function Ux.Tooltip.Show(slotid, target)
     Ux.Tooltip.Hide()
-    local item = Inspect.Item.Detail(slotid)
     tooltips.currentSlot = slotid
-    tooltips.main:Show(item)
-    
-    local x, y = GetTooltipPosition(tooltips.main, target)
-    tooltips.main.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
+    ShowTooltips(slotid, target)
 end
 
 function Ux.Tooltip.Hide(slotid)
     if slotid and slotid ~= tooltips.currentSlot then
         return
     else
-        tooltips.main:Hide()
-        tooltips.comp1:Hide()
-        tooltips.comp2:Hide()
+        for k, v in pairs(tooltips.showlist) do
+            v:Hide()
+        end
+        tooltips.showlist = {}
     end
 end

@@ -8,9 +8,14 @@ Environment = "1.10"
 
 RunOnStartup = {
     "utils.lua",
+    "uxmain.lua",
+    "frame/window.lua",
+    "frame/itemslot.lua",
+    "frame/itemwindow.lua",
 	"tooltip.lua",
 	"unionbag.lua",
 }
+
 SavedVariables = {
     UB_Settings = 'character',
 }
