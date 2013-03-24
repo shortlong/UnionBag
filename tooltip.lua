@@ -43,6 +43,7 @@ local itemDetailTrans = {
     damageDelay =     "速度",
     damagePerSecond = "每秒伤害",
     survival =        "野外生存",
+    fishing =         "钓鱼",
     
     consumable =      "消耗品",
     container =       "容器",
@@ -98,10 +99,8 @@ local itemDetailTrans = {
     warrior =         "战士",
 }
 
-local TOOLTIP_WIDTH = 240
-local TOOLTIP_BORDER_WIDTH = 2
-local TOOLTIP_BORDER_HEIGHT = 2
-local TOOLTIP_INFO_PADDING = 5
+local TOOLTIP_WIDTH = 260
+local TOOLTIP_INFO_PADDING = 10
 
 local function Translate(word)
     return itemDetailTrans[word] or word
@@ -109,45 +108,17 @@ end
 
 local function CreateTooltipFrame(pframe)
     local frame
-    frame = UI.CreateFrame("Frame", "tooltip.frame", pframe)
+    frame = UI.CreateFrame("Texture", "tooltip.frame", pframe)
+    frame:SetTexture("Rift", "ItemToolTip_I71.dds")
     frame:SetWidth(TOOLTIP_WIDTH)
     frame:SetVisible(false)
-    frame:SetBackgroundColor(0.04, 0.15, 0.10, 0.9)
     return frame
-end
-
-local function CreateTooltipBorder(pframe)
-    local border = { }
-    border.top = UI.CreateFrame("Frame", "tooltip.border", pframe)
-    border.top:SetWidth(TOOLTIP_WIDTH)
-    border.top:SetHeight(TOOLTIP_BORDER_HEIGHT)
-    border.top:SetBackgroundColor(1, 1, 1)
-    border.top:SetPoint("TOPLEFT", pframe, "TOPLEFT", 0, 0)
-    
-    border.bottom = UI.CreateFrame("Frame", "tooltip.border", pframe)
-    border.bottom:SetWidth(TOOLTIP_WIDTH)
-    border.bottom:SetHeight(TOOLTIP_BORDER_HEIGHT)
-    border.bottom:SetBackgroundColor(1, 1, 1)
-    border.bottom:SetPoint("BOTTOMLEFT", pframe, "BOTTOMLEFT", 0, 0)
-
-    border.left = UI.CreateFrame("Frame", "tooltip.border", pframe)
-    border.left:SetWidth(TOOLTIP_BORDER_WIDTH)
-    border.left:SetHeight(pframe:GetHeight())
-    border.left:SetBackgroundColor(1, 1, 1)
-    border.left:SetPoint("TOPLEFT", pframe, "TOPLEFT", 0, 0)
-
-    border.right = UI.CreateFrame("Frame", "tooltip.border", pframe)
-    border.right:SetWidth(TOOLTIP_BORDER_WIDTH)
-    border.right:SetHeight(pframe:GetHeight())
-    border.right:SetBackgroundColor(1, 1, 1)
-    border.right:SetPoint("TOPRIGHT", pframe, "TOPRIGHT", 0, 0)
-    return border
 end
 
 local function CreateText(parent)
     local frame = UI.CreateFrame("Text", "tolltip.info", parent)
     frame:SetVisible(false)
-    frame:SetWidth(TOOLTIP_WIDTH - TOOLTIP_BORDER_WIDTH*2 - TOOLTIP_INFO_PADDING*2)
+    frame:SetWidth(TOOLTIP_WIDTH - TOOLTIP_INFO_PADDING*2)
     frame:SetFontSize(14)
     return frame
 end
@@ -155,7 +126,7 @@ end
 local function CreateFrame(parent)
     local frame = UI.CreateFrame("Frame", "tolltip.info", parent)
     frame:SetVisible(false)
-    frame:SetWidth(TOOLTIP_WIDTH - TOOLTIP_BORDER_WIDTH*2 - TOOLTIP_INFO_PADDING*2)
+    frame:SetWidth(TOOLTIP_WIDTH - TOOLTIP_INFO_PADDING*2)
     return frame
 end
 
@@ -326,10 +297,8 @@ end
 local function AdjustTooltipSize(tooltip)
     local top = tooltip.frame:GetTop()
     local bottom = tooltip.info[tooltip.showlist[#tooltip.showlist][1]]:GetBottom()
-    local height = bottom - top + TOOLTIP_BORDER_HEIGHT + 4 
+    local height = bottom - top + TOOLTIP_INFO_PADDING*2
     tooltip.frame:SetHeight(height)
-    tooltip.border.left:SetHeight(height)
-    tooltip.border.right:SetHeight(height)
 end
 
 local function CreateTooltip(tooltipType)
@@ -337,18 +306,9 @@ local function CreateTooltip(tooltipType)
     tooltip.showlist = { }
     tooltip.tooltipType = tooltipType or "default"
     tooltip.frame = CreateTooltipFrame(tooltips.context)
-    tooltip.border = CreateTooltipBorder(tooltip.frame)
     tooltip.info = CreateTooltipInfoFrames(itemDetailFrame, tooltip.frame)
     
-    function tooltip.SetBorderColor(self, color)
-        local color = color or rarityColor["common"]
-        for k, v in pairs(self.border) do
-            v:SetBackgroundColor(color.r, color.g, color.b)
-        end
-    end
-    
     function tooltip.Update(self, item, comp)
-        self:SetBorderColor(rarityColor[item.rarity])
         SetTooltipInfo(self, item, comp)
         ShowTooltipInfo(self)
         AdjustTooltipSize(self)
@@ -379,10 +339,7 @@ local function CreateTooltip(tooltipType)
 end
 
 local function GetTooltipPosition(tipSize, target)
-    local targetTop = target:GetTop()
-    local targetBottom = target:GetBottom()
-    local targetLeft = target:GetLeft()
-    local targetRight = target:GetRight()
+    local targetLeft, targetTop, targetRight, targetBottom  = target:GetBounds()
     local windowWidth = UIParent:GetWidth()
     local postion = {}
     
@@ -477,8 +434,10 @@ end
 local function CompareStats(main, comp)
     local result = {}
     if main then for k, v in pairs(main) do result[k] = v end end
-    for k, v in pairsByKeys(comp) do
-        result[k] = (result[k] or 0) - v
+    if comp then
+        for k, v in pairsByKeys(comp) do
+            result[k] = (result[k] or 0) - v
+        end
     end
     return result
 end

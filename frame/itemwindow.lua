@@ -1,8 +1,9 @@
 local addon, shared = ...
 
+Ux = Ux or {}
 Ux.ItemWindow = Ux.ItemWindow or { }
 
-local slotTypeMap = {
+Ux.slotTypeMap = {
     inventory = {
         maxBags = 5,
         getSlotid = Utility.Item.Slot.Inventory,
@@ -11,11 +12,11 @@ local slotTypeMap = {
 
 local function CreateItemSlots(slotType, parent)
     local slots = {}
-    for bagindex = 1, slotTypeMap[slotType].maxBags do
-        local bag = GetItemDetail(slotTypeMap[slotType].getSlotid("bag", bagindex))
+    for bagindex = 1, Ux.slotTypeMap[slotType].maxBags do
+        local bag = GetItemDetail(Ux.slotTypeMap[slotType].getSlotid("bag", bagindex))
         if bag then
             for slotindex = 1, bag.slots do
-                local slotid = slotTypeMap[slotType].getSlotid(bagindex, slotindex)
+                local slotid = Ux.slotTypeMap[slotType].getSlotid(bagindex, slotindex)
                 slots[slotid] = Ux.ItemSlot.New(slotid, parent)
             end
         end
@@ -97,6 +98,8 @@ function Ux.ItemWindow.New(slotType, parent, title)
     itemwindow.slots = CreateItemSlots(slotType, itemwindow.window:GetContent())
     itemwindow.slotsRect = {}
     itemwindow.needUpdate = true
+    
+    Ux.SortButton.New(slotType, itemwindow.window)
     
     function itemwindow:SetSize(width, height)
         self.window:SetSize(width, height)

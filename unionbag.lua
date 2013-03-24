@@ -53,8 +53,10 @@ function UnitAvailabilityFull(t)
 end
 
 function Test()
-    --Dump(GetItemDetail(GetItemDetail("si01.001").id))
-    --Ux.Tooltip.Init()
+    print(Utility.Item.Slot.Inventory())
+    for k, v in pairs(GetItemDetail(GetItemDetail("si"))) do
+        print(k .. " " .. v.name)
+    end
 end
 
 table.insert(Command.Slash.Register("unionbag"), {ToggleWindow, addon.identifier, "Toggle Main Window"})
