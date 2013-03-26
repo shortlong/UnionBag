@@ -32,9 +32,16 @@ end
 
 function split(str, delim)
     local words = {}
-    for w in string.gmatch(str, "%a+") do
-        words[#words + 1] = w
-    end
+	local pattern
+	if delim then
+		if delim == "%" then delim = "%" .. delim end
+		pattern = "[^" .. delim .. "]+"
+	else
+		pattern = "[^%s]+"
+	end
+	for w in string.gmatch(str, pattern) do
+		words[#words + 1] = w
+	end
     return words
 end
 

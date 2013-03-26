@@ -68,7 +68,7 @@ local function CreateSlot(id, parent)
         local item = GetItemDetail(id)
         if item then
             slot.highlight:SetVisible(true)
-            Dump(item)
+            --print(item.name .. " " .. item.category)
             Command.Tooltip(item.id)
             Ux.Tooltip.Show(id, self)
         elseif Inspect.Cursor() == "item" then

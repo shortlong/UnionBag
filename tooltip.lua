@@ -46,20 +46,44 @@ local itemDetailTrans = {
     fishing =         "钓鱼",
     
     consumable =      "消耗品",
+    food =            "食物",
+    drink =           "饮料",
+    potion =          "药水",
+    enchantment =     "强化物",
+    scroll =          "卷轴",
     container =       "容器",
     crafting =        "制造材料",
+    material =        "材料",
+    meat =            "肉",
+    gem =             "宝石",
+    metal =           "金属",
+    wood =            "木材",
+    hide =            "兽皮",
+    fish =            "鱼",
+    rune =            "符文",
+    recipe =          "配方",
+    augment =         "强化物",
+    
     onehand =         "单手",
     twohand =         "双手",
     staff =           "法杖",
     wand =            "魔杖",
+    sword =           "剑",
+    axe =             "斧",
+    mace =            "锤",
     dagger =          "匕首",
     ranged =          "远程",
+    polearm =         "长柄武器",
     range =           "攻击范围",
     bow =             "弓",
+    gun =             "枪",
+    totem =           "图腾",
+    shield =          "盾",
+    
     leather =         "皮甲",
     plate =           "板甲",
     chain =           "锁甲",
-    
+    cloth =           "布甲",
     accessory =       "饰品",
     trinket =         "饰品",
     ring =            "戒指",
@@ -73,6 +97,7 @@ local itemDetailTrans = {
     neck =            "颈部",
     planar =          "位面精华",
     greater =         "高级",
+    lesser =          "低级",
     
     armor =           "护甲",
     dexterity =       "敏捷",
@@ -97,6 +122,9 @@ local itemDetailTrans = {
     rogue =           "游侠",
     cleric =          "牧师",
     warrior =         "战士",
+    
+    ["misc fishing misc"] = "鱼竿",
+    ["misc other"] = "消耗品",
 }
 
 local TOOLTIP_WIDTH = 260
@@ -137,7 +165,11 @@ local function CreateCategoryChild(parent)
     child.left:SetText("1")
     child.right = CreateText(parent)
     child.right:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
-    child.right:SetWidth(40)
+    child.right.SetTextNative = child.right.SetText
+    function child.right:SetText(text)
+        self:ClearWidth()
+        self:SetTextNative(text)
+    end
     parent:SetHeight(child.left:GetHeight())
     return child
 end
@@ -188,8 +220,12 @@ local function SetCategory(handle, categorys)
     local ct = split(categorys)
     if ct[1] == "weapon" then
         handle.left:SetText(Translate(ct[2]))
-        handle.right:SetText(Translate(ct[3]))
-        handle.right:SetVisible(true)
+        if ct[3] then
+            handle.right:SetText(Translate(ct[3]))
+            handle.right:SetVisible(true)
+        else
+            handle.right:SetVisible(false)
+        end
     elseif ct[1] == "armor" then
         handle.left:SetText(Translate(ct[3]))
         handle.right:SetText(Translate(ct[2]))
@@ -198,8 +234,31 @@ local function SetCategory(handle, categorys)
         handle.left:SetText(Translate(ct[1]))
         handle.right:SetText(Translate(ct[2]))
         handle.right:SetVisible(true)
-    else
+    elseif ct[1] == "crafting" then
+        if ct[2] == "ingredient" then 
+            handle.left:SetText(Translate("crafting"))
+            handle.right:SetVisible(false)
+        else
+            handle.left:SetText(Translate(ct[2]))
+            if ct[3] then
+                local text = Translate(ct[3])
+                if ct[3] == "cloth" then text = "布" end
+                handle.right:SetText(text)
+                handle.right:SetVisible(true)
+            else
+                handle.right:SetVisible(false)
+            end
+        end
+    elseif ct[1] == "consumable" then
         handle.left:SetText(Translate(ct[1]))
+        if ct[2] then
+            handle.right:SetText(Translate(ct[2]))
+            handle.right:SetVisible(true)
+        else
+            handle.right:SetVisible(false)
+        end
+    else
+        handle.left:SetText(Translate(categorys))
         handle.right:SetVisible(false)
     end
     handle.left:SetVisible(true)

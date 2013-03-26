@@ -52,11 +52,8 @@ function UnitAvailabilityFull(t)
     end
 end
 
-function Test()
-    print(Utility.Item.Slot.Inventory())
-    for k, v in pairs(GetItemDetail(GetItemDetail("si"))) do
-        print(k .. " " .. v.name)
-    end
+function Test(args)
+    local args = split(args)
 end
 
 table.insert(Command.Slash.Register("unionbag"), {ToggleWindow, addon.identifier, "Toggle Main Window"})

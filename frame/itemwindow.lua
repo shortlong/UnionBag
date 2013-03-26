@@ -72,6 +72,7 @@ end
 local function OnItemSlot(self, id, value)
     if self.slots[id] == nil then 
         self.slots[id] = Ux.ItemSlot.New(id, self.window:GetContent())
+        self.needUpdate = true
     end
 
     if type(value) == "boolean" and not value then 

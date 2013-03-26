@@ -1,9 +1,9 @@
 ﻿Identifier = "UnionBag"
 Name = "UnionBag"
-Description = "背包整合插件"
-Author = "Wang"
-Version = "0.1"
-Email = "286217157@qq.com"
+Description = "背包整合插件\n使用 /unionbag打开背包"
+Author = "little"
+Version = "1.0"
+Email = "wangzhi1990@126.com"
 Environment = "1.10"
 
 RunOnStartup = {
