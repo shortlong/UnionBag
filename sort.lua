@@ -98,7 +98,7 @@ local rarityOrder = {
 }
 
 local function GetCategoryOrder(category)
-    return categoryOrder[split(category)[1]] or 0
+    return categoryOrder[category] or 0
 end
 
 local function GetRarityOrder(rarity)
