@@ -3,125 +3,198 @@ local addon, shared = ...
 Ux = Ux or {}
 Ux.ItemWindow = Ux.ItemWindow or { }
 
-Ux.slotTypeMap = {
+Ux.bagTypeMap = {
     inventory = {
         maxBags = 5,
         getSlotid = Utility.Item.Slot.Inventory,
     },
+    bank = {
+        maxBags = 8,
+        getSlotid = Utility.Item.Slot.Bank,
+    },
 }
 
-local function CreateItemSlots(slotType, parent)
-    local slots = {}
-    for bagindex = 1, Ux.slotTypeMap[slotType].maxBags do
-        local bag = GetItemDetail(Ux.slotTypeMap[slotType].getSlotid("bag", bagindex))
-        if bag then
-            for slotindex = 1, bag.slots do
-                local slotid = Ux.slotTypeMap[slotType].getSlotid(bagindex, slotindex)
-                slots[slotid] = Ux.ItemSlot.New(slotid, parent)
+local function getBagInfo(bagType)
+    local result = {}
+    if bagType == "bank" then 
+        table.insert(result, {bagindex = "main", bagslots = 32})
+    end
+    for i = 1, Ux.bagTypeMap[bagType].maxBags do
+        local bag = GetItemDetail(Ux.bagTypeMap[bagType].getSlotid("bag", i))
+        if bag then table.insert(result, {bagindex = i, bagslots = bag.slots}) end
+    end
+    return result
+end
+
+local function createItemSlots(bagType, parent)
+    local slotids = {}
+    for _, v in ipairs(getBagInfo(bagType)) do
+        for i = 1, v.bagslots do
+            table.insert(slotids, Ux.bagTypeMap[bagType].getSlotid(v.bagindex, i))
+        end
+    end
+    return Ux.ItemSlots.New(slotids, parent)
+end
+
+local function createBagSlots(bagType, parent)
+    local bagids = {}
+    for i = 1, Ux.bagTypeMap[bagType].maxBags do
+        bagids[#bagids + 1] = Ux.bagTypeMap[bagType].getSlotid("bag", i)
+    end
+    return Ux.BagSlots.New(bagids, parent)
+end
+
+local function compareSlotsId(a, b)
+    local _, a_param = Utility.Item.Slot.Parse(a)
+    local _, b_param = Utility.Item.Slot.Parse(b)
+    if a_param == "main" and b_param ~= "main" then
+        return true
+    elseif b_param == "main" and a_param ~= "main" then
+        return false
+    else
+        return a < b
+    end
+end
+
+local function getItemAndSlotList(slots)
+    local items = {}
+    local slotids = {}
+    for id, v in pairsByKeys(slots, compareSlotsId) do
+        if v:GetVisible() then
+            table.insert(slotids, id)
+            if v.item then
+                table.insert(items, {id = id, value = v.item})
             end
         end
     end
-    return slots
+    return items, slotids
 end
 
-local function ArrangeSlots(self)
-    local row = 1
-    local firstSlotOfLastLine = nil
-    local lastSlotInLine = nil
-
-    for id, slot in pairsByKeys(self.slots) do
-        if slot:GetVisible() then
-            if row == 1 and firstSlotOfLastLine == nil then 
-                slot:SetPoint("TOPLEFT", slot:GetParent(), "TOPLEFT", 0, 0)
-                firstSlotOfLastLine = slot
-                self.slotsRect.top = slot:GetTop()
-                self.slotsRect.left = slot:GetLeft()
-            elseif row == 1 and firstSlotOfLastLine ~= nil then
-                slot.frame:SetPoint("TOPLEFT", firstSlotOfLastLine.frame, "BOTTOMLEFT", 0, -11)
-                firstSlotOfLastLine = slot
-            else
-                slot.frame:SetPoint("TOPLEFT", lastSlotInLine.frame, "TOPRIGHT", -11, 0)
-            end
-            lastSlotInLine = slot
-
-            row = row + 1
-            if row > UB_Settings.slots_per_line then 
-                row = 1
-                self.slotsRect.right = slot:GetRight()
-            end
-        end
-    end
-    self.slotsRect.bottom = lastSlotInLine:GetBottom()
-end
-
-local function GetChangesInSize(newSize, frame)
-    local dx, dy
-    dx = newSize.right - frame:GetRight()
-    dy = newSize.bottom - frame:GetBottom()
+local function getChangesInSize(self, target)
+    local right = self.itemslots:GetRight()
+    if self.bagslots:GetVisible() then right = self.bagslots:GetRight() end
+    local bottom = math.max(self.itemslots:GetBottom(), self.bagslots:GetBottom())
+    dx = right - target:GetRight()
+    dy = bottom - target:GetBottom()
     return dx, dy
 end
 
-local function AdjustWindowSize(self)
-    local dx, dy = GetChangesInSize(self.slotsRect, self.window:GetContent())
-    local newWidth = self.window:GetWidth() + dx
-    local newHeight = self.window:GetHeight() + dy
+local function adjustWindowSize(self)
+    local dx, dy = getChangesInSize(self, self:GetContent())
+    local newWidth = self:GetWidth() + dx
+    local newHeight = self:GetHeight() + dy
     if newHeight < 480 then newHeight = 480 end
     self:SetSize(newWidth, newHeight)
 end
 
 local function OnItemSlot(self, id, value)
-    if self.slots[id] == nil then 
-        self.slots[id] = Ux.ItemSlot.New(id, self.window:GetContent())
-        self.needUpdate = true
-    end
-
-    if type(value) == "boolean" and not value then 
-        if self.slots[id]:GetVisible() then
-            self.slots[id]:Empty()
-            Ux.Tooltip.Hide(id)
-        else
-            self.slots[id]:SetVisible(true)
-            self.needUpdate = true
-        end
-    elseif value == "nil" then
-        self.slots[id]:SetVisible(false)
-        self.needUpdate = true
+    local _, param = Utility.Item.Slot.Parse(id)
+    if param == "bag" then
+        self.bagslots:OnItemSlot(id, value)
     else
-        self:OnItemUpdate(id)
+        self.itemslots:OnItemSlot(id, value)
     end
 end
 
------------ Public ------------
-function Ux.ItemWindow.New(slotType, parent, title)
-    local itemwindow = {}
-    itemwindow.slotType = slotType
-    itemwindow.window = Ux.Window.New(parent, title)
-    itemwindow.slots = CreateItemSlots(slotType, itemwindow.window:GetContent())
-    itemwindow.slotsRect = {}
-    itemwindow.needUpdate = true
-    
-    Ux.SortButton.New(slotType, itemwindow.window)
-    
-    function itemwindow:SetSize(width, height)
-        self.window:SetSize(width, height)
+local function OnItemUpdate(self, id)
+    local _, param = Utility.Item.Slot.Parse(id)
+    if param == "bag" then
+        self.bagslots:OnItemUpdate(id)
+    else
+        self.itemslots:OnItemUpdate(id)
     end
-    function itemwindow:SetPoint(x, y)
-        self.window:SetPoint("TOPLEFT", parent,"TOPLEFT", x, y)
-    end
-    function itemwindow:Toggle()
-        self.window:Toggle()
-    end
-    function itemwindow:Update()
-        if self.needUpdate then
-            ArrangeSlots(self)
-            AdjustWindowSize(self)
-            self.needUpdate = false
+end
+
+local function moveItems(movelist)
+    for _, v in ipairs(movelist) do
+        for i = #v, 2, -1 do
+            Command.Item.Move(v[i - 1], v[i])
         end
     end
-    function itemwindow:OnItemUpdate(id)
-        self.slots[id]:Update()
+end
+
+local function getSlotsOfBag(slots, bagid, num, bagType)
+    local result = {}
+    local _, _, bagindex = Utility.Item.Slot.Parse(bagid)
+    for i = 1, num do
+        table.insert(result, slots[Ux.bagTypeMap[bagType].getSlotid(bagindex, i)])
     end
-    itemwindow.OnItemSlot = OnItemSlot
+    return result
+end
+
+local function highlight(slots, state)
+    for _, v in pairs(slots) do
+        v:Highlight(state)
+    end
+end
+
+local function createItemWindow(bagType)
+    local context = UI.CreateContext(addon.identifier)
+    context:SetStrata("dialog")
+    local this = Ux.Window.New(context)
+    this.needUpdate = true
+    this.bagType = bagType
     
-    return itemwindow
+    this.itemslots = createItemSlots(bagType, this:GetContent())
+    this.itemslots:SetSlotSize(60, 60)
+    this.bagslots = createBagSlots(bagType, this:GetContent())
+    this.bagslots:SetVisible(false)
+    this.bagslots:SetSlotSize(45, 45)
+    this.bagslots:SetSlotEvent("MouseOut", function(self)
+        self:Highlight(false)
+        if self.item then
+            highlight(getSlotsOfBag(this.itemslots.slots, self.slotid, self.item.slots, bagType), false)
+        end
+    end)
+    this.bagslots:SetSlotEvent("MouseIn", function(self)
+        local item = self.item
+        if item then
+            self:Highlight(true)
+            highlight(getSlotsOfBag(this.itemslots.slots, self.slotid, self.item.slots, bagType), true)
+        elseif Inspect.Cursor() == "item" then
+            self:Highlight(true)
+        end
+    end)
+    
+    this.itemslots:SetPoint("TOPLEFT", this:GetContent(), "TOPLEFT", 0, 3)
+    this.bagslots:SetPoint("TOPLEFT", this.itemslots, "TOPRIGHT", 3, 3)
+    
+    this.sortButton = Ux.SortButton.New(this)
+    function this.sortButton.Event:LeftClick()
+        moveItems(Sort(getItemAndSlotList(this.itemslots:GetSlots())))
+    end
+    function this.sortButton.Event:RightClick()
+        this.bagslots:SetVisible(not this.bagslots:GetVisible())
+        adjustWindowSize(this)
+    end
+    
+    return this
+end
+
+----------- Public ------------
+function Ux.ItemWindow.New(bagType)
+    local this = createItemWindow(bagType)
+    
+    function this:Offline()
+        self.sortButton:SetVisible(false)
+        this.itemslots:Offline()
+        this.bagslots:Offline()
+    end
+    
+    function this:Online()
+        self.sortButton:SetVisible(true)
+        this.itemslots:Online()
+        this.bagslots:Online()
+    end
+    
+    function this:Update()
+        self.itemslots:Update()
+        self.bagslots:Update()
+        adjustWindowSize(self)
+    end
+    
+    this.OnItemUpdate = OnItemUpdate
+    this.OnItemSlot = OnItemSlot
+    
+    return this
 end

@@ -2,7 +2,7 @@ local addon, shared = ...
 
 Ux.SortButton = Ux.SortButton or { }
 
-function Ux.SortButton.New(slotType, parent)
+function Ux.SortButton.New(parent)
     local button = UI.CreateFrame("Texture", "sort button", parent)
     button:SetTexture(addon.identifier, "textures/icon_menu_sort.png")
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, 16)
@@ -15,7 +15,5 @@ function Ux.SortButton.New(slotType, parent)
     function button.Event:MouseOut()
         button:SetTexture(addon.identifier, "textures/icon_menu_sort.png")
     end
-    function button.Event:LeftClick()
-        Sort(slotType)
-    end
+    return button
 end

@@ -2,32 +2,49 @@ local addon, shared = ...
 
 Ux = Ux or { }
 
-function ToggleWindow()
-    Ux.Toggle()
-end
-
 function LoadUBData(a)
     if a == addon.identifier then
-        if UB_Settings == nil then
-            UB_Settings = {}
-            UB_Settings.x = 400
-            UB_Settings.y = 300
-            UB_Settings.width = 500
-            UB_Settings.height = 500
-            UB_Settings.slots_per_line = 10
+        UB_Settings = UB_Settings or {}
+        if UB_Settings.inventory == nil then
+            UB_Settings.inventory = { 
+                x = UIParent:GetWidth() * 0.6, 
+                y = UIParent:GetHeight() * 0.35,
+            }
         end
-        if UB_Settings.x > UIParent:GetWidth() * 0.9 then 
-            UB_Settings.x = UIParent:GetWidth() * 0.55
+        if UB_Settings.bank == nil then
+            UB_Settings.bank = { 
+                x = 10, 
+                y = 10,
+            }
         end
-        if UB_Settings.y > UIParent:GetHeight() * 0.9 then 
-            UB_Settings.y = UIParent:GetHeight() * 0.35
+        for k,v in pairs(UB_Settings) do
+            if type(v) == "table" then
+                if v.x > UIParent:GetWidth() * 0.9 then
+                    v.x = UIParent:GetWidth() * 0.6
+                end
+                if v.y > UIParent:GetHeight() * 0.65 then
+                    v.y = UIParent:GetHeight() * 0.35
+                end
+            end
         end
     end
 end
 
-function AddItemEvent()
-    table.insert(Event.Item.Update, {Ux.OnItemUpdate, addon.identifier, "item update"})
-    table.insert(Event.Item.Slot, {Ux.OnItemSlot, addon.identifier, "item slot change"})
+function SaveUBData(a)
+    if a == addon.identifier then
+        UB_Settings.inventory.x = Ux.inventory:GetLeft()
+        UB_Settings.inventory.y = Ux.inventory:GetTop()
+        UB_Settings.bank.x = Ux.bank:GetLeft()
+        UB_Settings.bank.y = Ux.bank:GetTop()
+    end
+end
+
+function RemoveEvent(event, handler)
+    for i, value in ipairs(event) do
+        if value == handler then
+           table.remove(event, i)
+        end
+    end
 end
 
 local initialized = false
@@ -38,8 +55,8 @@ function SystemUpdateBegin()
         initialized = true
         initialization_enabled = false
         Ux.Init()
-        AddItemEvent()
-        print(addon.identifier .. " loaded")
+        RemoveEvent(Event.System.Update.Begin, SystemUpdateBeginHandler)
+        print(addon.identifier .. " " .. addon.toc.Version .. " loaded")
     end
 end
 
@@ -47,6 +64,7 @@ function UnitAvailabilityFull(t)
     if initialized then return end
     for k, v in pairs(t) do
         if v == "player" then
+            Ux.playerInfo = Inspect.Unit.Detail("player")
             initialization_enabled = true
         end
     end
@@ -56,8 +74,11 @@ function Test(args)
     local args = split(args)
 end
 
-table.insert(Command.Slash.Register("unionbag"), {ToggleWindow, addon.identifier, "Toggle Main Window"})
-table.insert(Command.Slash.Register("test"), {Test, addon.identifier, "test"})
-table.insert(Event.System.Update.Begin, {SystemUpdateBegin, addon.identifier, "addon start"})
+SystemUpdateBeginHandler = {SystemUpdateBegin, addon.identifier, "addon start"}
+UnitAvailabilityFullHandler = {UnitAvailabilityFull, addon.identifier, "Availability Full" }
+
+--table.insert(Command.Slash.Register("test"), {Test, addon.identifier, "test"})
 table.insert(Event.Addon.SavedVariables.Load.End, {LoadUBData, addon.identifier, "load variables"})
-table.insert(Event.Unit.Availability.Full, {UnitAvailabilityFull, addon.identifier, "Availability Full" })
+table.insert(Event.Addon.SavedVariables.Save.Begin, {SaveUBData, addon.identifier, "save variable"})
+table.insert(Event.Unit.Availability.Full, UnitAvailabilityFullHandler)
+table.insert(Event.System.Update.Begin, SystemUpdateBeginHandler)

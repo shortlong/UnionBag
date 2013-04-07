@@ -1,22 +1,15 @@
-local function GetSpaces(n)
-    local res = ""
-    for i = 0, n do
-        res = res .. " "
-    end
-    return res
-end
 
-local function dump(var, depth)
+local function dump_var(var, depth)
     if type(var) == "boolean" then
         return tostring(var)
     elseif type(var) == "nil" then
         return "nil"
     elseif type(var) == "table" then
         local res = "{\n"
-        local spaces = GetSpaces(depth)
+        local spaces = string.rep(" ", depth)
         for k, v in pairs(var) do
             res = res .. spaces .. k .. " = "
-            res = res .. dump(v, depth + 4) .. ",\n"
+            res = res .. dump_var(v, depth + 4) .. ",\n"
         end
         return res .. "}"
     elseif type(var) == "string" then
@@ -26,8 +19,8 @@ local function dump(var, depth)
     end
 end
 
-function Dump(var)
-	print(dump(var, 0))
+function dump(var)
+	print(dump_var(var, 0))
 end
 
 function split(str, delim)
@@ -58,7 +51,6 @@ function round(num, bit)
     return num - num%divide
 end
 
-
 function pairsByKeys(t, f)
     local a = {}
     for n in pairs(t) do a[#a + 1] = n end
@@ -68,6 +60,19 @@ function pairsByKeys(t, f)
         i = i + 1
         return a[i], t[a[i]]
     end
+end
+
+function getTableCount(t)
+    local count = 0
+    for k, v in pairs(t) do
+        count = count + 1
+    end
+    return count
+end
+
+function setDefault(t, d)
+    local mt = {__index = function() return d end,}
+    setmetatable(t, mt) 
 end
 
 function GetPlayerName()

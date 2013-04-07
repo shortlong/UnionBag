@@ -1,19 +1,28 @@
 ﻿Identifier = "UnionBag"
 Name = "UnionBag"
-Description = "背包整合插件\n使用 /unionbag打开背包"
+Description = "背包整合插件"
 Author = "little"
-Version = "1.0"
+Version = "1.1"
 Email = "wangzhi1990@126.com"
 Environment = "1.10"
 
 RunOnStartup = {
+    "data/color.lua",
+    "data/order.lua",
+    "data/translate.lua",
     "utils.lua",
     "uxmain.lua",
     "sort.lua",
     "frame/window.lua",
     "frame/sortbutton.lua",
-    "frame/itemslot.lua",
+    "frame/slots.lua",
+    "frame/itemslots.lua",
+    "frame/bagslots.lua",
     "frame/itemwindow.lua",
+    "frame/icontext.lua",
+    "frame/moneyframe.lua",
+    "frame/splitline.lua",
+    "libs/itemtooltip.lua",
 	"tooltip.lua",
 	"unionbag.lua",
 }

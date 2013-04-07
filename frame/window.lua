@@ -13,42 +13,66 @@ local function CreateCloseButton(parent)
     end
 end
 
------------ Public ------------
-function Ux.Window.New(parent, title)
-    local window = UI.CreateFrame("RiftWindow", "window", parent)
-    window:SetVisible(false)
-    if title then window:SetTitle(title) end
-    CreateCloseButton(window)
-
-    function window:SetSize(width, height)
-        self:SetWidth(width)
-        self:SetHeight(height)
-    end
+local function createTitle(parent)
+    local this = UI.CreateFrame("Text", "windowtitle", parent)
+    this:SetFontSize(18)
+    this:SetFontColor(0, 0, 0)
     
-    function window:Toggle()
-        window:SetVisible(not window:GetVisible())
-    end
-
-    local border = window:GetBorder()
-    function border.Event:LeftDown()
+    function this.Event:LeftDown()
         self.leftDown = true
         local point = Inspect.Mouse()
-        self.x = point.x - self:GetLeft()
-        self.y = point.y - self:GetTop()
+        self.x = point.x - parent:GetLeft()
+        self.y = point.y - parent:GetTop()
     end
-    function border.Event:LeftUp()
+    function this.Event:LeftUp()
         self.leftDown = false
-        UB_Settings.x = window:GetLeft()
-        UB_Settings.y = window:GetTop()
     end
-    function border.Event:MouseMove()
+    function this.Event:LeftUpoutside()
+        self.leftDown = false
+    end
+    function this.Event:MouseMove()
         if self.leftDown then
             local dx, dy
             local point = Inspect.Mouse()
             dx = point.x - self.x
             dy = point.y - self.y
-            window:SetPoint("TOPLEFT", UIParent, "TOPLEFT", dx, dy)
+            parent:SetPoint(dx, dy)
         end
     end
+    return this
+end
+
+----------- Public ------------
+function Ux.Window.New(parent)
+    local window = UI.CreateFrame("RiftWindow", "window", parent)
+    window:SetVisible(false)
+    window:SetTitle("")
+    window.title = createTitle(window)
+    window.title:SetPoint("TOPCENTER", window, "TOPCENTER", 0, 15)
+    CreateCloseButton(window)
+
+    function window:SetTitle(text)
+        self.title:ClearWidth()
+        self.title:SetText(text)
+    end
+    function window:Show()
+        self:SetVisible(true)
+    end
+    function window:Hide()
+        self:SetVisible(false)
+        Ux.Tooltip.Hide()
+    end
+    function window:SetParentLayer(layer)
+        self:GetParent():SetLayer(layer)
+    end
+    function window:SetSize(width, height)
+        self:SetWidth(width)
+        self:SetHeight(height)
+    end
+    window.SetPointNative = window.SetPoint
+    function window:SetPoint(x, y)
+        self:SetPointNative("TOPLEFT", parent,"TOPLEFT", x, y)
+    end
+
     return window
 end
